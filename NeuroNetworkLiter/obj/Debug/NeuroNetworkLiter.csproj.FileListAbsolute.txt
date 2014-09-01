@@ -19,3 +19,5 @@ D:\Desktop\NeuroNetworkLiter\NeuroNetworkLiter\bin\Debug\Images\3b.bmp
 D:\Desktop\NeuroNetworkLiter\NeuroNetworkLiter\bin\Debug\Images\3c.bmp
 D:\Desktop\NeuroNetworkLiter\NeuroNetworkLiter\bin\Debug\Images\1a.bmp
 D:\Desktop\NeuroNetworkLiter\NeuroNetworkLiter\obj\Debug\NeuroNetworkLiter_Content.g.cs
+D:\Desktop\NeuroNetworkLiter\NeuroNetworkLiter\bin\Debug\NeuroNetworkLiter.exe.config
+D:\Desktop\NeuroNetworkLiter\NeuroNetworkLiter\obj\Debug\NeuroNetworkLiter.csprojResolveAssemblyReference.cache
