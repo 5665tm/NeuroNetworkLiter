@@ -1,12 +1,14 @@
-﻿// Changed 2014 09 01 9:25 PM Karavaev Vadim
+﻿// Changed 2014 09 01 10:31 PM Karavaev Vadim
 
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Globalization;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
-using System.Windows.Documents;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -23,8 +25,16 @@ namespace NeuroNetworkLiter
 	{
 		private readonly Random _rnd = new Random();
 		private readonly BeginInvokeDelegate _refresh;
-		private Bitmap _bitmapInput;
 		private double _speed = 1;
+		private readonly List<double> inputList = new List<double> {0};
+		private int _counter;
+		private int _numberOfShot = 0;
+		private Bitmap _bitmapInput;
+		private ImageSource _imgSourceFromBitmap;
+		private ImageSource memorySource1;
+		private ImageSource memorySource2;
+		private ImageSource memorySource3;
+
 
 		private Web NW1 = new Web(8, 10, new int[8, 10]);
 		private Web NW2 = new Web(8, 10, new int[8, 10]);
@@ -34,28 +44,29 @@ namespace NeuroNetworkLiter
 		{
 			InitializeComponent();
 
+			RefreshGraph();
+			byte[,] sou = new byte[2, 2] {{100, 200}, {0, 50}};
+			Memory1.Source = WeightToBitmap(sou);
+
+
 			_refresh = delegate
 			{
-				ImageSource imgSourceFromBitmap =
-					Imaging.CreateBitmapSourceFromHBitmap(_bitmapInput.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-				InputImage.Source = imgSourceFromBitmap;
 				_speed = LearnSpeed.Value;
+				_imgSourceFromBitmap = Imaging.CreateBitmapSourceFromHBitmap(_bitmapInput.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+				InputImage.Source = _imgSourceFromBitmap;
+				if (_counter++ == 20)
+				{
+					inputList.Add(Convert.ToDouble(_numberOfShot)/_counter);
+					RefreshGraph();
+				}
 			};
 			var thread = new Thread(Run);
 			thread.Start();
-			List<double> inputList = new List<double>();
-			inputList.Add(1);
-			inputList.Add(0.5);
-			inputList.Add(0.05);
-			inputList.Add(0.03);
-			inputList.Add(0.83);
-			inputList.Add(0.33);
-			CreateGraph(inputList);
 		}
 
-		private void CreateGraph(List<double> input)
+		private void RefreshGraph()
 		{
-			double[] data1 = input.ToArray();
+			double[] data1 = inputList.ToArray();
 			int np = data1.Length - 1;
 			// new double Np+1
 
@@ -63,24 +74,23 @@ namespace NeuroNetworkLiter
 			var aDrawingGroup = new DrawingGroup();
 
 
-			for (int DrawingStage = 0; DrawingStage < 10; DrawingStage++)
+			for (int drawingStage = 0; drawingStage < 10; drawingStage++)
 			{
 				var drw = new GeometryDrawing();
 				var gg = new GeometryGroup();
 
 
 				//Задный фон
-				if (DrawingStage == 1)
+				if (drawingStage == 1)
 				{
 					drw.Brush = Brushes.Beige;
 					drw.Pen = new Pen(Brushes.LightGray, 0.01);
-					var myRectGeometry = new RectangleGeometry();
-					myRectGeometry.Rect = new Rect(0, 0, 1, 1);
+					var myRectGeometry = new RectangleGeometry {Rect = new Rect(0, 0, 1, 1)};
 					gg.Children.Add(myRectGeometry);
 				}
 
 				//Мелкая сетка
-				if (DrawingStage == 2)
+				if (drawingStage == 2)
 				{
 					drw.Brush = Brushes.Beige;
 					drw.Pen = new Pen(Brushes.Gray, 0.003);
@@ -105,7 +115,7 @@ namespace NeuroNetworkLiter
 
 
 				//график #1 - линия
-				if (DrawingStage == 3)
+				if (drawingStage == 3)
 				{
 					drw.Brush = Brushes.White;
 					drw.Pen = new Pen(Brushes.Black, 0.005);
@@ -113,26 +123,25 @@ namespace NeuroNetworkLiter
 					gg = new GeometryGroup();
 					for (int i = 0; i < np; i++)
 					{
-						LineGeometry l = new LineGeometry(new Point(i/(double) np, 1.0 - (data1[i])),
+						var l = new LineGeometry(new Point(i/(double) np, 1.0 - (data1[i])),
 							new Point((i + 1)/(double) np, 1.0 - (data1[i + 1])));
 						gg.Children.Add(l);
 					}
 				}
 
 				//Обрезание лишнего
-				if (DrawingStage == 5)
+				if (drawingStage == 5)
 				{
 					drw.Brush = Brushes.Transparent;
 					drw.Pen = new Pen(Brushes.White, 0.2);
 
-					var myRectGeometry = new RectangleGeometry();
-					myRectGeometry.Rect = new Rect(-0.1, -0.1, 1.2, 1.2);
+					var myRectGeometry = new RectangleGeometry {Rect = new Rect(-0.1, -0.1, 1.2, 1.2)};
 					gg.Children.Add(myRectGeometry);
 				}
 
 
 				//Рамка
-				if (DrawingStage == 6)
+				if (drawingStage == 6)
 				{
 					drw.Brush = Brushes.Transparent;
 					drw.Pen = new Pen(Brushes.LightGray, 0.01);
@@ -143,7 +152,7 @@ namespace NeuroNetworkLiter
 
 
 				//Надписи
-				if (DrawingStage == 7)
+				if (drawingStage == 7)
 				{
 					drw.Brush = Brushes.LightGray;
 					drw.Pen = new Pen(Brushes.Gray, 0.003);
@@ -152,7 +161,7 @@ namespace NeuroNetworkLiter
 					{
 						// Create a formatted text string.
 						var formattedText = new FormattedText(
-							(1 - i*0.1).ToString(CultureInfo.InvariantCulture),
+							(100 - i*10).ToString(CultureInfo.InvariantCulture),
 							CultureInfo.GetCultureInfo("en-us"),
 							FlowDirection.LeftToRight,
 							new Typeface("Verdana"),
@@ -184,7 +193,36 @@ namespace NeuroNetworkLiter
 				int font = _rnd.Next(97, 100); // a, b, c
 				string imagePath = "Images/" + Convert.ToString(number) + ((char) font) + ".bmp";
 				_bitmapInput = new Bitmap(imagePath);
+
 				Dispatcher.BeginInvoke(DispatcherPriority.Input, _refresh);
+				Thread.Sleep(500);
+			}
+		}
+
+		private ImageSource WeightToBitmap(byte[,] weight)
+		{
+			int i = 0;
+			var input = new byte[weight.Length*3];
+			foreach (var b in weight)
+			{
+				input[i++] = b;
+				input[i++] = b;
+				input[i++] = b;
+			}
+			using (MemoryStream ms = new MemoryStream(input))
+			{
+				int w = 1;
+				int h = 1;
+				int ch = 3; //number of channels (ie. assuming 24 bit RGB in this case)
+
+				Bitmap bitmap = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+				BitmapData bmData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadWrite, bitmap.PixelFormat);
+				IntPtr pNative = bmData.Scan0;
+				Marshal.Copy(input, 0, pNative, input.Length);
+				bitmap.UnlockBits(bmData);
+
+
+				return Imaging.CreateBitmapSourceFromHBitmap(bitmap.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
 			}
 		}
 	}
