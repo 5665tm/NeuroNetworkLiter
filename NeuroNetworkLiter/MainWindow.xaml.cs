@@ -1,4 +1,4 @@
-﻿// Changed 2014 09 01 10:47 PM Karavaev Vadim
+﻿// Changed 2014 09 02 12:06 AM Karavaev Vadim
 
 using System;
 using System.Collections.Generic;
@@ -28,7 +28,7 @@ namespace NeuroNetworkLiter
 		private double _speed = 1;
 		private readonly List<double> inputList = new List<double> {0};
 		private int _counter;
-		private int _numberOfShot = 0;
+		private int _numberOfShot;
 		private Bitmap _bitmapInput;
 		private ImageSource _imgSourceFromBitmap;
 		private ImageSource memorySource1;
@@ -37,8 +37,8 @@ namespace NeuroNetworkLiter
 
 
 		private readonly Web NW1 = new Web(8, 10, new int[8, 10]);
-		private Web NW2 = new Web(8, 10, new int[8, 10]);
-		private Web NW3 = new Web(8, 10, new int[8, 10]);
+		private readonly Web NW2 = new Web(8, 10, new int[8, 10]);
+		private readonly Web NW3 = new Web(8, 10, new int[8, 10]);
 
 		public MainWindow()
 		{
@@ -51,7 +51,7 @@ namespace NeuroNetworkLiter
 			_refresh = delegate
 			{
 				int number = _rnd.Next(1, 4);
-				int font = _rnd.Next(97, 100); // a, b, c
+				int font = _rnd.Next(97, 103); // a, b, c
 				string imagePath = "Images/" + Convert.ToString(number) + ((char) font) + ".bmp";
 				_bitmapInput = new Bitmap(imagePath);
 
@@ -59,8 +59,8 @@ namespace NeuroNetworkLiter
 				{
 					for (var y = 0; y < 10; y++)
 					{
-						int n = (_bitmapInput.GetPixel(x, y).R);
-						if (n >= 250)
+						int n = ((_bitmapInput.GetPixel(x, y).B) + (_bitmapInput.GetPixel(x, y).G) + (_bitmapInput.GetPixel(x, y).R))/3;
+						if (n >= 220)
 							n = 0; // Определяем, закрашен ли пиксель
 						else
 							n = 1;
@@ -68,10 +68,10 @@ namespace NeuroNetworkLiter
 						NW1.input[x, y] = n; // Присваиваем соответствующее значение каждой ячейке входных данных
 						NW2.input[x, y] = n; // Присваиваем соответствующее значение каждой ячейке входных данных
 						NW3.input[x, y] = n; // Присваиваем соответствующее значение каждой ячейке входных данных
-
 					}
 				}
 
+				bool result = false;
 				NW1.mul_w();
 				NW1.Sum();
 				if (number == 1)
@@ -79,12 +79,13 @@ namespace NeuroNetworkLiter
 					if (NW1.Rez())
 					{
 						Ans1.Fill = Brushes.Green;
-						_numberOfShot++;
+						result = true;
 					}
 					else
 					{
 						Ans1.Fill = Brushes.Red;
 						NW1.incW(NW1.input);
+						result = false;
 					}
 				}
 				else
@@ -93,11 +94,11 @@ namespace NeuroNetworkLiter
 					{
 						Ans1.Fill = Brushes.Red;
 						NW1.decW(NW1.input);
+						result = false;
 					}
 					else
 					{
 						Ans1.Fill = Brushes.Blue;
-						_numberOfShot++;
 					}
 				}
 				Memory1.Source = WeightToBitmap(NW1.weight);
@@ -109,12 +110,13 @@ namespace NeuroNetworkLiter
 					if (NW2.Rez())
 					{
 						Ans2.Fill = Brushes.Green;
-						_numberOfShot++;
+						result = true;
 					}
 					else
 					{
 						Ans2.Fill = Brushes.Red;
 						NW2.incW(NW2.input);
+						result = false;
 					}
 				}
 				else
@@ -123,11 +125,11 @@ namespace NeuroNetworkLiter
 					{
 						Ans2.Fill = Brushes.Red;
 						NW2.decW(NW2.input);
+						result = false;
 					}
 					else
 					{
 						Ans2.Fill = Brushes.Blue;
-						_numberOfShot++;
 					}
 				}
 				Memory2.Source = WeightToBitmap(NW2.weight);
@@ -139,12 +141,13 @@ namespace NeuroNetworkLiter
 					if (NW3.Rez())
 					{
 						Ans3.Fill = Brushes.Green;
-						_numberOfShot++;
+						result = true;
 					}
 					else
 					{
 						Ans3.Fill = Brushes.Red;
 						NW3.incW(NW3.input);
+						result = false;
 					}
 				}
 				else
@@ -153,13 +156,15 @@ namespace NeuroNetworkLiter
 					{
 						Ans3.Fill = Brushes.Red;
 						NW3.decW(NW3.input);
+						result = false;
 					}
 					else
 					{
 						Ans3.Fill = Brushes.Blue;
-						_numberOfShot++;
 					}
 				}
+				if (result)
+					_numberOfShot++;
 				Memory3.Source = WeightToBitmap(NW3.weight);
 
 				_speed = LearnSpeed.Value;
@@ -167,7 +172,7 @@ namespace NeuroNetworkLiter
 				InputImage.Source = _imgSourceFromBitmap;
 				if (_counter++ == 20)
 				{
-					inputList.Add((Convert.ToDouble(_numberOfShot)/(_counter * 3)) - 0.01);
+					inputList.Add((Convert.ToDouble(_numberOfShot)/(_counter)) - 0.01);
 					_numberOfShot = 0;
 					_counter = 0;
 					RefreshGraph();
@@ -310,21 +315,25 @@ namespace NeuroNetworkLiter
 		{
 			int i = 0;
 			var input = new byte[weight.Length*3];
-			foreach (var b in weight)
+			for (int m = 0; m < 10; m++)
 			{
-				int val = b*1;
-				byte value = 0;
-				if (val > 0)
+				for (int s = 0; s < 8; s++)
 				{
-					if (val > 255)
+					int b = weight[s, m];
+					int val = b*1;
+					byte value = 0;
+					if (val > 0)
 					{
-						val = 255;
+						if (val > 255)
+						{
+							val = 255;
+						}
+						value = Convert.ToByte(val);
 					}
-					value = Convert.ToByte(val);
+					input[i++] = value;
+					input[i++] = value;
+					input[i++] = value;
 				}
-				input[i++] = value;
-				input[i++] = value;
-				input[i++] = value;
 			}
 			using (MemoryStream ms = new MemoryStream(input))
 			{
@@ -348,7 +357,7 @@ namespace NeuroNetworkLiter
 		public int[,] mul; // Тут будем хранить отмасштабированные сигналы
 		public int[,] weight; // Массив для хранения весов
 		public int[,] input; // Входная информация
-		public int limit = 1000; // Порог - выбран экспериментально, для быстрого обучения
+		public int limit = 2000; // Порог - выбран экспериментально, для быстрого обучения
 		public int sum; // Тут сохраним сумму масштабированных сигналов
 
 		public Web(int sizex, int sizey, int[,] inP) // Задаем свойства при создании объекта

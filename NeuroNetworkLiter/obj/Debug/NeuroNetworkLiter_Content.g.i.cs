@@ -10,12 +10,21 @@
 
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/1b.bmp")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/1c.bmp")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/1d.bmp")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/1e.bmp")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/1f.bmp")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/2a.bmp")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/2b.bmp")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/2c.bmp")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/2d.bmp")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/2e.bmp")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/2f.bmp")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/3a.bmp")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/3b.bmp")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/3c.bmp")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/3d.bmp")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/3e.bmp")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/3f.bmp")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("images/1a.bmp")]
 
 
