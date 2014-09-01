@@ -1,4 +1,4 @@
-﻿// Changed 2014 09 01 10:31 PM Karavaev Vadim
+﻿// Changed 2014 09 01 10:47 PM Karavaev Vadim
 
 using System;
 using System.Collections.Generic;
@@ -36,7 +36,7 @@ namespace NeuroNetworkLiter
 		private ImageSource memorySource3;
 
 
-		private Web NW1 = new Web(8, 10, new int[8, 10]);
+		private readonly Web NW1 = new Web(8, 10, new int[8, 10]);
 		private Web NW2 = new Web(8, 10, new int[8, 10]);
 		private Web NW3 = new Web(8, 10, new int[8, 10]);
 
@@ -46,17 +46,130 @@ namespace NeuroNetworkLiter
 
 			RefreshGraph();
 			byte[,] sou = new byte[2, 2] {{100, 200}, {0, 50}};
-			Memory1.Source = WeightToBitmap(sou);
 
 
 			_refresh = delegate
 			{
+				int number = _rnd.Next(1, 4);
+				int font = _rnd.Next(97, 100); // a, b, c
+				string imagePath = "Images/" + Convert.ToString(number) + ((char) font) + ".bmp";
+				_bitmapInput = new Bitmap(imagePath);
+
+				for (var x = 0; x < 8; x++)
+				{
+					for (var y = 0; y < 10; y++)
+					{
+						int n = (_bitmapInput.GetPixel(x, y).R);
+						if (n >= 250)
+							n = 0; // Определяем, закрашен ли пиксель
+						else
+							n = 1;
+
+						NW1.input[x, y] = n; // Присваиваем соответствующее значение каждой ячейке входных данных
+						NW2.input[x, y] = n; // Присваиваем соответствующее значение каждой ячейке входных данных
+						NW3.input[x, y] = n; // Присваиваем соответствующее значение каждой ячейке входных данных
+
+					}
+				}
+
+				NW1.mul_w();
+				NW1.Sum();
+				if (number == 1)
+				{
+					if (NW1.Rez())
+					{
+						Ans1.Fill = Brushes.Green;
+						_numberOfShot++;
+					}
+					else
+					{
+						Ans1.Fill = Brushes.Red;
+						NW1.incW(NW1.input);
+					}
+				}
+				else
+				{
+					if (NW1.Rez())
+					{
+						Ans1.Fill = Brushes.Red;
+						NW1.decW(NW1.input);
+					}
+					else
+					{
+						Ans1.Fill = Brushes.Blue;
+						_numberOfShot++;
+					}
+				}
+				Memory1.Source = WeightToBitmap(NW1.weight);
+
+				NW2.mul_w();
+				NW2.Sum();
+				if (number == 2)
+				{
+					if (NW2.Rez())
+					{
+						Ans2.Fill = Brushes.Green;
+						_numberOfShot++;
+					}
+					else
+					{
+						Ans2.Fill = Brushes.Red;
+						NW2.incW(NW2.input);
+					}
+				}
+				else
+				{
+					if (NW2.Rez())
+					{
+						Ans2.Fill = Brushes.Red;
+						NW2.decW(NW2.input);
+					}
+					else
+					{
+						Ans2.Fill = Brushes.Blue;
+						_numberOfShot++;
+					}
+				}
+				Memory2.Source = WeightToBitmap(NW2.weight);
+
+				NW3.mul_w();
+				NW3.Sum();
+				if (number == 3)
+				{
+					if (NW3.Rez())
+					{
+						Ans3.Fill = Brushes.Green;
+						_numberOfShot++;
+					}
+					else
+					{
+						Ans3.Fill = Brushes.Red;
+						NW3.incW(NW3.input);
+					}
+				}
+				else
+				{
+					if (NW3.Rez())
+					{
+						Ans3.Fill = Brushes.Red;
+						NW3.decW(NW3.input);
+					}
+					else
+					{
+						Ans3.Fill = Brushes.Blue;
+						_numberOfShot++;
+					}
+				}
+				Memory3.Source = WeightToBitmap(NW3.weight);
+
 				_speed = LearnSpeed.Value;
 				_imgSourceFromBitmap = Imaging.CreateBitmapSourceFromHBitmap(_bitmapInput.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
 				InputImage.Source = _imgSourceFromBitmap;
 				if (_counter++ == 20)
 				{
-					inputList.Add(Convert.ToDouble(_numberOfShot)/_counter);
+					inputList.Add((Convert.ToDouble(_numberOfShot)/(_counter * 3)) - 0.01);
+					_numberOfShot = 0;
+					_counter = 0;
 					RefreshGraph();
 				}
 			};
@@ -189,31 +302,34 @@ namespace NeuroNetworkLiter
 			while (true)
 			{
 				Thread.Sleep((int) (1000d/_speed));
-				int number = _rnd.Next(1, 4);
-				int font = _rnd.Next(97, 100); // a, b, c
-				string imagePath = "Images/" + Convert.ToString(number) + ((char) font) + ".bmp";
-				_bitmapInput = new Bitmap(imagePath);
-
 				Dispatcher.BeginInvoke(DispatcherPriority.Input, _refresh);
-				Thread.Sleep(500);
 			}
 		}
 
-		private ImageSource WeightToBitmap(byte[,] weight)
+		private ImageSource WeightToBitmap(int[,] weight)
 		{
 			int i = 0;
 			var input = new byte[weight.Length*3];
 			foreach (var b in weight)
 			{
-				input[i++] = b;
-				input[i++] = b;
-				input[i++] = b;
+				int val = b*1;
+				byte value = 0;
+				if (val > 0)
+				{
+					if (val > 255)
+					{
+						val = 255;
+					}
+					value = Convert.ToByte(val);
+				}
+				input[i++] = value;
+				input[i++] = value;
+				input[i++] = value;
 			}
 			using (MemoryStream ms = new MemoryStream(input))
 			{
-				int w = 1;
-				int h = 1;
-				int ch = 3; //number of channels (ie. assuming 24 bit RGB in this case)
+				int w = 8;
+				int h = 10;
 
 				Bitmap bitmap = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
 				BitmapData bmData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadWrite, bitmap.PixelFormat);
@@ -232,7 +348,7 @@ namespace NeuroNetworkLiter
 		public int[,] mul; // Тут будем хранить отмасштабированные сигналы
 		public int[,] weight; // Массив для хранения весов
 		public int[,] input; // Входная информация
-		public int limit = 9; // Порог - выбран экспериментально, для быстрого обучения
+		public int limit = 1000; // Порог - выбран экспериментально, для быстрого обучения
 		public int sum; // Тут сохраним сумму масштабированных сигналов
 
 		public Web(int sizex, int sizey, int[,] inP) // Задаем свойства при создании объекта
@@ -247,9 +363,9 @@ namespace NeuroNetworkLiter
 		// масштабирование
 		public void mul_w()
 		{
-			for (int x = 0; x <= 2; x++)
+			for (int x = 0; x <= 7; x++)
 			{
-				for (int y = 0; y <= 4; y++) // Пробегаем по каждому аксону
+				for (int y = 0; y <= 9; y++) // Пробегаем по каждому аксону
 				{
 					mul[x, y] = input[x, y]*weight[x, y]; // Умножаем его сигнал (0 или 1) на его собственный вес и сохраняем в массив.
 				}
@@ -257,14 +373,37 @@ namespace NeuroNetworkLiter
 		}
 
 		// сложение
-		public void Sum()
+		public int Sum()
 		{
 			sum = 0;
-			for (int x = 0; x <= 2; x++)
+			for (int x = 0; x <= 7; x++)
 			{
-				for (int y = 0; y <= 4; y++)
+				for (int y = 0; y <= 9; y++)
 				{
 					sum += mul[x, y];
+				}
+			}
+			return sum;
+		}
+
+		public void incW(int[,] inP)
+		{
+			for (int x = 0; x <= 7; x++)
+			{
+				for (int y = 0; y <= 9; y++)
+				{
+					weight[x, y] += inP[x, y];
+				}
+			}
+		}
+
+		public void decW(int[,] inP)
+		{
+			for (int x = 0; x <= 7; x++)
+			{
+				for (int y = 0; y <= 9; y++)
+				{
+					weight[x, y] -= inP[x, y];
 				}
 			}
 		}

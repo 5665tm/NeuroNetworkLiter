@@ -11,9 +11,10 @@
 		<Image x:Name="Memory1" HorizontalAlignment="Left" Height="200" Margin="175,10,0,0" VerticalAlignment="Top" Width="160" Stretch="Fill"/>
 		<Image x:Name="Memory2" HorizontalAlignment="Left" Height="200" Margin="340,10,0,0" VerticalAlignment="Top" Width="160" Stretch="Fill"/>
 		<Image x:Name="Memory3" HorizontalAlignment="Left" Height="200" Margin="505,10,0,0" VerticalAlignment="Top" Width="160" Stretch="Fill"/>
-		<Rectangle x:Name="Ans1" Fill="#FFF4F4F5" HorizontalAlignment="Left" Height="29" Margin="175,229,0,0" Stroke="Black" VerticalAlignment="Top" Width="160"/>
+		<Rectangle x:Name="Ans1" Fill="White" HorizontalAlignment="Left" Height="29" Margin="175,229,0,0" Stroke="Black" VerticalAlignment="Top" Width="160"/>
 		<Rectangle x:Name="Ans2" Fill="#FFF4F4F5" HorizontalAlignment="Left" Height="29" Margin="340,229,0,0" Stroke="Black" VerticalAlignment="Top" Width="160"/>
 		<Rectangle x:Name="Ans3" Fill="#FFF4F4F5" HorizontalAlignment="Left" Height="29" Margin="505,229,0,0" Stroke="Black" VerticalAlignment="Top" Width="160"/>
 		<Image x:Name="Image1" HorizontalAlignment="Left" Height="398" Margin="10,263,0,0" VerticalAlignment="Top" Width="688" Stretch="Fill"/>
+		<Label Content="Процент угадываний" HorizontalAlignment="Right" Margin="0,263,0,0" VerticalAlignment="Top" Width="708" Foreground="White" HorizontalContentAlignment="Center" Background="Black"/>
 	</Grid>
 </Window>
