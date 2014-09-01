@@ -1,4 +1,4 @@
-﻿// Changed 2014 09 02 12:06 AM Karavaev Vadim
+﻿// Changed 2014 09 02 1:00 AM Karavaev Vadim
 
 using System;
 using System.Collections.Generic;
@@ -6,9 +6,11 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -28,12 +30,14 @@ namespace NeuroNetworkLiter
 		private double _speed = 1;
 		private readonly List<double> inputList = new List<double> {0};
 		private int _counter;
-		private int _numberOfShot;
+		private List<bool> _numberOfShot = new List<bool>();
 		private Bitmap _bitmapInput;
 		private ImageSource _imgSourceFromBitmap;
 		private ImageSource memorySource1;
 		private ImageSource memorySource2;
 		private ImageSource memorySource3;
+		private readonly Thread thread;
+		private int l = 0;
 
 
 		private readonly Web NW1 = new Web(8, 10, new int[8, 10]);
@@ -164,21 +168,37 @@ namespace NeuroNetworkLiter
 					}
 				}
 				if (result)
-					_numberOfShot++;
+					_numberOfShot.Add(true);
+				else
+				{
+					_numberOfShot.Add(false);
+				}
 				Memory3.Source = WeightToBitmap(NW3.weight);
 
 				_speed = LearnSpeed.Value;
 				_imgSourceFromBitmap = Imaging.CreateBitmapSourceFromHBitmap(_bitmapInput.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
 				InputImage.Source = _imgSourceFromBitmap;
-				if (_counter++ == 20)
+				if (_counter++ > 50)
 				{
-					inputList.Add((Convert.ToDouble(_numberOfShot)/(_counter)) - 0.01);
-					_numberOfShot = 0;
-					_counter = 0;
-					RefreshGraph();
+					_numberOfShot.RemoveRange(0, 1);
+					//int lol = _numberOfShot.Count(x => true);
 				}
+				int lol = (from e in _numberOfShot
+					where e
+					select e).Count();
+				double newResult = (Convert.ToDouble(lol)/_numberOfShot.Count);
+				if (newResult > 0.99)
+				{
+					newResult = 0.99;
+				}
+				else if (newResult < 0.01)
+				{
+					newResult = 0.01;
+				}
+				inputList.Add(newResult);
+				RefreshGraph();
 			};
-			var thread = new Thread(Run);
+			thread = new Thread(Run);
 			thread.Start();
 		}
 
@@ -308,6 +328,7 @@ namespace NeuroNetworkLiter
 			{
 				Thread.Sleep((int) (1000d/_speed));
 				Dispatcher.BeginInvoke(DispatcherPriority.Input, _refresh);
+				Thread.Sleep(20);
 			}
 		}
 
@@ -320,7 +341,7 @@ namespace NeuroNetworkLiter
 				for (int s = 0; s < 8; s++)
 				{
 					int b = weight[s, m];
-					int val = b*1;
+					int val = 50 + b*4;
 					byte value = 0;
 					if (val > 0)
 					{
@@ -335,7 +356,7 @@ namespace NeuroNetworkLiter
 					input[i++] = value;
 				}
 			}
-			using (MemoryStream ms = new MemoryStream(input))
+			using (var ms = new MemoryStream(input))
 			{
 				int w = 8;
 				int h = 10;
@@ -350,6 +371,11 @@ namespace NeuroNetworkLiter
 				return Imaging.CreateBitmapSourceFromHBitmap(bitmap.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
 			}
 		}
+
+		private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+		{
+			thread.Abort();
+		}
 	}
 
 	internal class Web
@@ -357,7 +383,7 @@ namespace NeuroNetworkLiter
 		public int[,] mul; // Тут будем хранить отмасштабированные сигналы
 		public int[,] weight; // Массив для хранения весов
 		public int[,] input; // Входная информация
-		public int limit = 2000; // Порог - выбран экспериментально, для быстрого обучения
+		public int limit = 1000; // Порог - выбран экспериментально, для быстрого обучения
 		public int sum; // Тут сохраним сумму масштабированных сигналов
 
 		public Web(int sizex, int sizey, int[,] inP) // Задаем свойства при создании объекта
