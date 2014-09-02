@@ -1,4 +1,4 @@
-﻿// Changed 2014 09 02 1:00 AM Karavaev Vadim
+﻿// Changed 2014 09 02 9:52 PM Karavaev Vadim
 
 using System;
 using System.Collections.Generic;
@@ -16,6 +16,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Brushes = System.Windows.Media.Brushes;
+using Image = System.Windows.Controls.Image;
 using Pen = System.Windows.Media.Pen;
 using PixelFormat = System.Drawing.Imaging.PixelFormat;
 using Point = System.Windows.Point;
@@ -25,15 +26,16 @@ namespace NeuroNetworkLiter
 {
 	public delegate void BeginInvokeDelegate();
 
+
 	public partial class MainWindow
 	{
 		private readonly List<double> _inputList = new List<double> {0};
 
 		private readonly Neuron[] _neuronNetwork =
 		{
-			new Neuron(8, 10, new int[8, 10]),
-			new Neuron(8, 10, new int[8, 10]),
-			new Neuron(8, 10, new int[8, 10])
+			new Neuron(8, 10),
+			new Neuron(8, 10),
+			new Neuron(8, 10)
 		};
 
 		private readonly List<bool> _numberOfShot = new List<bool>();
@@ -72,8 +74,6 @@ namespace NeuroNetworkLiter
 					}
 				}
 
-				bool result = false;
-
 				int answer = 1;
 				int p = _neuronNetwork.Max(x => x.GetAxonPower());
 				for (int i = 0; i < _neuronNetwork.Length; i++)
@@ -85,7 +85,7 @@ namespace NeuroNetworkLiter
 				}
 
 				Rectangle[] rec = {Ans1, Ans2, Ans3};
-				result = Fill(number, answer, rec);
+				bool result = Fill(number, answer, rec);
 
 				if (result)
 					_numberOfShot.Add(true);
@@ -95,9 +95,9 @@ namespace NeuroNetworkLiter
 				}
 
 				_speed = LearnSpeed.Value;
-				ImageSource imgSourceFromBitmap = Imaging.CreateBitmapSourceFromHBitmap(bitmapInput.GetHbitmap(), IntPtr.Zero,
-					Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-				InputImage.Source = imgSourceFromBitmap;
+
+				LoadBitmapFromImageControl(bitmapInput, InputImage);
+
 				if (_counter++ > 20)
 				{
 					_numberOfShot.RemoveRange(0, 1);
@@ -121,6 +121,66 @@ namespace NeuroNetworkLiter
 			_thread = new Thread(Run);
 			_thread.Start();
 		}
+
+		private void LoadBitmapFromImageControl(Bitmap bitmapInput, Image image)
+		{
+			var b = new Bitmap(160, 200);
+			using (Graphics g = Graphics.FromImage(b))
+			{
+				g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+				g.DrawImage(bitmapInput, 0, 0, b.Width, b.Height);
+				ImageSource imgSourceFromBitmap = Imaging.CreateBitmapSourceFromHBitmap(b.GetHbitmap(), IntPtr.Zero,
+					Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+				image.Source = imgSourceFromBitmap;
+			}
+
+
+			var listByte = new byte[10*8*3];
+			for (int x = 0; x < 10; x++)
+			{
+				for (int y = 0; y < 8; y++)
+				{
+					listByte[(((8*x)+y) * 3) + 0] = bitmapInput.GetPixel(y, x).B;
+					listByte[(((8*x)+y) * 3) + 1] = bitmapInput.GetPixel(y, x).G;
+					listByte[(((8*x)+y) * 3) + 2] = bitmapInput.GetPixel(y, x).R;
+				}
+			}
+
+			var input = new byte[listByte.Length*20*20];
+			List<int> ins = new List<int>();
+			int i = 0;
+			for (int m = 0; m < listByte.Length; m+=3)
+			{
+				for (int k = 0; k < 20; k++)
+				{
+					for (int s = 0; s < 20; s++)
+					{
+						input[((k*8*20 + s + (i/8)*8*20*20 + (i%8)*20) * 3) + 0] = listByte[m + 0];
+						input[((k*8*20 + s + (i/8)*8*20*20 + (i%8)*20) * 3) + 1] = listByte[m + 1];
+						input[((k*8*20 + s + (i/8)*8*20*20 + (i%8)*20) * 3) + 2] = listByte[m + 2];
+					}
+				}
+				i++;
+			}
+			using (new MemoryStream(input))
+			{
+				const int w = 8*20;
+				const int h = 10*20;
+
+				var bitmap = new Bitmap(w, h, PixelFormat.Format24bppRgb);
+				BitmapData bmData = bitmap.LockBits(new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height),
+					ImageLockMode.ReadWrite,
+					bitmap.PixelFormat);
+				IntPtr pNative = bmData.Scan0;
+				Marshal.Copy(input, 0, pNative, input.Length);
+				bitmap.UnlockBits(bmData);
+
+
+				image.Source = Imaging.CreateBitmapSourceFromHBitmap(bitmap.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty,
+					BitmapSizeOptions.FromEmptyOptions());
+			}
+		}
+
 
 		private bool Fill(int number, int answer, Rectangle[] rec)
 		{
@@ -156,9 +216,9 @@ namespace NeuroNetworkLiter
 					}
 				}
 			}
-			Memory1.Source = WeightToBitmap(_neuronNetwork[0].Weight);
-			Memory2.Source = WeightToBitmap(_neuronNetwork[1].Weight);
-			Memory3.Source = WeightToBitmap(_neuronNetwork[2].Weight);
+			LoadBitmapFromImageControl(WeightToBitmap((_neuronNetwork[0].Weight)), Memory1);
+			LoadBitmapFromImageControl(WeightToBitmap((_neuronNetwork[1].Weight)), Memory2);
+			LoadBitmapFromImageControl(WeightToBitmap((_neuronNetwork[2].Weight)), Memory3);
 			return result;
 		}
 
@@ -292,7 +352,7 @@ namespace NeuroNetworkLiter
 			}
 		}
 
-		private ImageSource WeightToBitmap(int[,] weight)
+		private Bitmap WeightToBitmap(int[,] weight)
 		{
 			int i = 0;
 			var input = new byte[weight.Length*3];
@@ -330,8 +390,7 @@ namespace NeuroNetworkLiter
 				bitmap.UnlockBits(bmData);
 
 
-				return Imaging.CreateBitmapSourceFromHBitmap(bitmap.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty,
-					BitmapSizeOptions.FromEmptyOptions());
+				return bitmap;
 			}
 		}
 
