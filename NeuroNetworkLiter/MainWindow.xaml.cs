@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Globalization;
@@ -10,14 +11,15 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
-using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Brushes = System.Windows.Media.Brushes;
 using Pen = System.Windows.Media.Pen;
+using PixelFormat = System.Drawing.Imaging.PixelFormat;
 using Point = System.Windows.Point;
+using Rectangle = System.Windows.Shapes.Rectangle;
 
 namespace NeuroNetworkLiter
 {
@@ -25,164 +27,82 @@ namespace NeuroNetworkLiter
 
 	public partial class MainWindow
 	{
-		private readonly Random _rnd = new Random();
+		private readonly List<double> _inputList = new List<double> {0};
+
+		private readonly Neuron[] _neuronNetwork =
+		{
+			new Neuron(8, 10, new int[8, 10]),
+			new Neuron(8, 10, new int[8, 10]),
+			new Neuron(8, 10, new int[8, 10])
+		};
+
+		private readonly List<bool> _numberOfShot = new List<bool>();
+
 		private readonly BeginInvokeDelegate _refresh;
-		private double _speed = 1;
-		private readonly List<double> inputList = new List<double> {0};
+		private readonly Random _rnd = new Random();
+		private readonly Thread _thread;
 		private int _counter;
-		private List<bool> _numberOfShot = new List<bool>();
-		private Bitmap _bitmapInput;
-		private ImageSource _imgSourceFromBitmap;
-		private ImageSource memorySource1;
-		private ImageSource memorySource2;
-		private ImageSource memorySource3;
-		private readonly Thread thread;
-		private int l = 0;
-
-
-		private readonly Web NW1 = new Web(8, 10, new int[8, 10]);
-		private readonly Web NW2 = new Web(8, 10, new int[8, 10]);
-		private readonly Web NW3 = new Web(8, 10, new int[8, 10]);
+		private double _speed = 1;
 
 		public MainWindow()
 		{
 			InitializeComponent();
-
 			RefreshGraph();
-			byte[,] sou = new byte[2, 2] {{100, 200}, {0, 50}};
-
 
 			_refresh = delegate
 			{
 				int number = _rnd.Next(1, 4);
 				int font = _rnd.Next(97, 103); // a, b, c
 				string imagePath = "Images/" + Convert.ToString(number) + ((char) font) + ".bmp";
-				_bitmapInput = new Bitmap(imagePath);
+				var bitmapInput = new Bitmap(imagePath);
 
-				for (var x = 0; x < 8; x++)
+				for (int x = 0; x < 8; x++)
 				{
-					for (var y = 0; y < 10; y++)
+					for (int y = 0; y < 10; y++)
 					{
-						int n = ((_bitmapInput.GetPixel(x, y).B) + (_bitmapInput.GetPixel(x, y).G) + (_bitmapInput.GetPixel(x, y).R))/3;
+						int n = ((bitmapInput.GetPixel(x, y).B) + (bitmapInput.GetPixel(x, y).G) + (bitmapInput.GetPixel(x, y).R))/3;
 						if (n >= 220)
 							n = 0; // Определяем, закрашен ли пиксель
 						else
 							n = 1;
 
-						NW1.input[x, y] = n; // Присваиваем соответствующее значение каждой ячейке входных данных
-						NW2.input[x, y] = n; // Присваиваем соответствующее значение каждой ячейке входных данных
-						NW3.input[x, y] = n; // Присваиваем соответствующее значение каждой ячейке входных данных
+						_neuronNetwork[0].Input[x, y] = n; // Присваиваем соответствующее значение каждой ячейке входных данных
+						_neuronNetwork[1].Input[x, y] = n; // Присваиваем соответствующее значение каждой ячейке входных данных
+						_neuronNetwork[2].Input[x, y] = n; // Присваиваем соответствующее значение каждой ячейке входных данных
 					}
 				}
 
 				bool result = false;
-				NW1.mul_w();
-				NW1.Sum();
-				if (number == 1)
-				{
-					if (NW1.Rez())
-					{
-						Ans1.Fill = Brushes.Green;
-						result = true;
-					}
-					else
-					{
-						Ans1.Fill = Brushes.Red;
-						NW1.incW(NW1.input);
-						result = false;
-					}
-				}
-				else
-				{
-					if (NW1.Rez())
-					{
-						Ans1.Fill = Brushes.Red;
-						NW1.decW(NW1.input);
-						result = false;
-					}
-					else
-					{
-						Ans1.Fill = Brushes.Blue;
-					}
-				}
-				Memory1.Source = WeightToBitmap(NW1.weight);
 
-				NW2.mul_w();
-				NW2.Sum();
-				if (number == 2)
+				int answer = 1;
+				int p = _neuronNetwork.Max(x => x.GetAxonPower());
+				for (int i = 0; i < _neuronNetwork.Length; i++)
 				{
-					if (NW2.Rez())
+					if (_neuronNetwork[i].GetAxonPower() == p)
 					{
-						Ans2.Fill = Brushes.Green;
-						result = true;
-					}
-					else
-					{
-						Ans2.Fill = Brushes.Red;
-						NW2.incW(NW2.input);
-						result = false;
+						answer = i + 1;
 					}
 				}
-				else
-				{
-					if (NW2.Rez())
-					{
-						Ans2.Fill = Brushes.Red;
-						NW2.decW(NW2.input);
-						result = false;
-					}
-					else
-					{
-						Ans2.Fill = Brushes.Blue;
-					}
-				}
-				Memory2.Source = WeightToBitmap(NW2.weight);
 
-				NW3.mul_w();
-				NW3.Sum();
-				if (number == 3)
-				{
-					if (NW3.Rez())
-					{
-						Ans3.Fill = Brushes.Green;
-						result = true;
-					}
-					else
-					{
-						Ans3.Fill = Brushes.Red;
-						NW3.incW(NW3.input);
-						result = false;
-					}
-				}
-				else
-				{
-					if (NW3.Rez())
-					{
-						Ans3.Fill = Brushes.Red;
-						NW3.decW(NW3.input);
-						result = false;
-					}
-					else
-					{
-						Ans3.Fill = Brushes.Blue;
-					}
-				}
+				Rectangle[] rec = {Ans1, Ans2, Ans3};
+				result = Fill(number, answer, rec);
+
 				if (result)
 					_numberOfShot.Add(true);
 				else
 				{
 					_numberOfShot.Add(false);
 				}
-				Memory3.Source = WeightToBitmap(NW3.weight);
 
 				_speed = LearnSpeed.Value;
-				_imgSourceFromBitmap = Imaging.CreateBitmapSourceFromHBitmap(_bitmapInput.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-				InputImage.Source = _imgSourceFromBitmap;
-				if (_counter++ > 50)
+				ImageSource imgSourceFromBitmap = Imaging.CreateBitmapSourceFromHBitmap(bitmapInput.GetHbitmap(), IntPtr.Zero,
+					Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+				InputImage.Source = imgSourceFromBitmap;
+				if (_counter++ > 20)
 				{
 					_numberOfShot.RemoveRange(0, 1);
-					//int lol = _numberOfShot.Count(x => true);
 				}
+
 				int lol = (from e in _numberOfShot
 					where e
 					select e).Count();
@@ -195,16 +115,56 @@ namespace NeuroNetworkLiter
 				{
 					newResult = 0.01;
 				}
-				inputList.Add(newResult);
+				_inputList.Add(newResult);
 				RefreshGraph();
 			};
-			thread = new Thread(Run);
-			thread.Start();
+			_thread = new Thread(Run);
+			_thread.Start();
+		}
+
+		private bool Fill(int number, int answer, Rectangle[] rec)
+		{
+			bool result;
+			if (number == answer)
+			{
+				result = true;
+				for (int i = 0; i < rec.Length; i++)
+				{
+					if (i != (number - 1))
+					{
+						rec[i].Fill = Brushes.Gray;
+					}
+					else
+					{
+						rec[i].Fill = Brushes.Green;
+					}
+				}
+			}
+			else
+			{
+				result = false;
+				for (int i = 0; i < rec.Length; i++)
+				{
+					rec[i].Fill = i != (answer - 1) ? Brushes.Gray : Brushes.Red;
+					if (i != (number - 1))
+					{
+						_neuronNetwork[i].Punish(_neuronNetwork[i].Input);
+					}
+					else
+					{
+						_neuronNetwork[i].Award(_neuronNetwork[i].Input);
+					}
+				}
+			}
+			Memory1.Source = WeightToBitmap(_neuronNetwork[0].Weight);
+			Memory2.Source = WeightToBitmap(_neuronNetwork[1].Weight);
+			Memory3.Source = WeightToBitmap(_neuronNetwork[2].Weight);
+			return result;
 		}
 
 		private void RefreshGraph()
 		{
-			double[] data1 = inputList.ToArray();
+			double[] data1 = _inputList.ToArray();
 			int np = data1.Length - 1;
 			// new double Np+1
 
@@ -326,9 +286,9 @@ namespace NeuroNetworkLiter
 		{
 			while (true)
 			{
-				Thread.Sleep((int) (1000d/_speed));
+				Thread.Sleep((int) (3000d/_speed));
 				Dispatcher.BeginInvoke(DispatcherPriority.Input, _refresh);
-				Thread.Sleep(20);
+				Thread.Sleep(400);
 			}
 		}
 
@@ -341,7 +301,7 @@ namespace NeuroNetworkLiter
 				for (int s = 0; s < 8; s++)
 				{
 					int b = weight[s, m];
-					int val = 50 + b*4;
+					int val = 50 + b*10;
 					byte value = 0;
 					if (val > 0)
 					{
@@ -361,92 +321,23 @@ namespace NeuroNetworkLiter
 				int w = 8;
 				int h = 10;
 
-				Bitmap bitmap = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-				BitmapData bmData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadWrite, bitmap.PixelFormat);
+				var bitmap = new Bitmap(w, h, PixelFormat.Format24bppRgb);
+				BitmapData bmData = bitmap.LockBits(new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height),
+					ImageLockMode.ReadWrite,
+					bitmap.PixelFormat);
 				IntPtr pNative = bmData.Scan0;
 				Marshal.Copy(input, 0, pNative, input.Length);
 				bitmap.UnlockBits(bmData);
 
 
-				return Imaging.CreateBitmapSourceFromHBitmap(bitmap.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+				return Imaging.CreateBitmapSourceFromHBitmap(bitmap.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty,
+					BitmapSizeOptions.FromEmptyOptions());
 			}
 		}
 
-		private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+		private void Window_Closing(object sender, CancelEventArgs e)
 		{
-			thread.Abort();
-		}
-	}
-
-	internal class Web
-	{
-		public int[,] mul; // Тут будем хранить отмасштабированные сигналы
-		public int[,] weight; // Массив для хранения весов
-		public int[,] input; // Входная информация
-		public int limit = 1000; // Порог - выбран экспериментально, для быстрого обучения
-		public int sum; // Тут сохраним сумму масштабированных сигналов
-
-		public Web(int sizex, int sizey, int[,] inP) // Задаем свойства при создании объекта
-		{
-			weight = new int[sizex, sizey]; // Определяемся с размером массива (число входов)
-			mul = new int[sizex, sizey];
-
-			input = new int[sizex, sizey];
-			input = inP; // Получаем входные данные
-		}
-
-		// масштабирование
-		public void mul_w()
-		{
-			for (int x = 0; x <= 7; x++)
-			{
-				for (int y = 0; y <= 9; y++) // Пробегаем по каждому аксону
-				{
-					mul[x, y] = input[x, y]*weight[x, y]; // Умножаем его сигнал (0 или 1) на его собственный вес и сохраняем в массив.
-				}
-			}
-		}
-
-		// сложение
-		public int Sum()
-		{
-			sum = 0;
-			for (int x = 0; x <= 7; x++)
-			{
-				for (int y = 0; y <= 9; y++)
-				{
-					sum += mul[x, y];
-				}
-			}
-			return sum;
-		}
-
-		public void incW(int[,] inP)
-		{
-			for (int x = 0; x <= 7; x++)
-			{
-				for (int y = 0; y <= 9; y++)
-				{
-					weight[x, y] += inP[x, y];
-				}
-			}
-		}
-
-		public void decW(int[,] inP)
-		{
-			for (int x = 0; x <= 7; x++)
-			{
-				for (int y = 0; y <= 9; y++)
-				{
-					weight[x, y] -= inP[x, y];
-				}
-			}
-		}
-
-		// сравнение
-		public bool Rez()
-		{
-			return sum >= limit;
+			_thread.Abort();
 		}
 	}
 }
