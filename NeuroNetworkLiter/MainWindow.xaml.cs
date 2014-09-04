@@ -1,9 +1,10 @@
-﻿// Changed 2014 09 02 9:52 PM Karavaev Vadim
+﻿// Changed: 2014 09 04 9:57 : 5665tm
 
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
@@ -16,6 +17,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Brushes = System.Windows.Media.Brushes;
+using DashStyle = System.Windows.Media.DashStyle;
 using Image = System.Windows.Controls.Image;
 using Pen = System.Windows.Media.Pen;
 using PixelFormat = System.Drawing.Imaging.PixelFormat;
@@ -26,10 +28,10 @@ namespace NeuroNetworkLiter
 {
 	public delegate void BeginInvokeDelegate();
 
-
 	public partial class MainWindow
 	{
-		private readonly List<double> _inputList = new List<double> {0};
+		private const double _TOLERANCE = 0.001;
+		private readonly List<double> _inputList = new List<double> { 0 };
 
 		private readonly Neuron[] _neuronNetwork =
 		{
@@ -39,7 +41,6 @@ namespace NeuroNetworkLiter
 		};
 
 		private readonly List<bool> _numberOfShot = new List<bool>();
-
 		private readonly BeginInvokeDelegate _refresh;
 		private readonly Random _rnd = new Random();
 		private readonly Thread _thread;
@@ -62,11 +63,9 @@ namespace NeuroNetworkLiter
 				{
 					for (int y = 0; y < 10; y++)
 					{
-						int n = ((bitmapInput.GetPixel(x, y).B) + (bitmapInput.GetPixel(x, y).G) + (bitmapInput.GetPixel(x, y).R))/3;
-						if (n >= 220)
-							n = 0; // Определяем, закрашен ли пиксель
-						else
-							n = 1;
+						double n = Math.Min((bitmapInput.GetPixel(x, y).B), (bitmapInput.GetPixel(x, y).G));
+						n = Math.Min(n, bitmapInput.GetPixel(x, y).R);
+						n = 255 - n;
 
 						_neuronNetwork[0].Input[x, y] = n; // Присваиваем соответствующее значение каждой ячейке входных данных
 						_neuronNetwork[1].Input[x, y] = n; // Присваиваем соответствующее значение каждой ячейке входных данных
@@ -75,28 +74,22 @@ namespace NeuroNetworkLiter
 				}
 
 				int answer = 1;
-				int p = _neuronNetwork.Max(x => x.GetAxonPower());
+				double p = _neuronNetwork.Max(x => x.GetAxonPower());
 				for (int i = 0; i < _neuronNetwork.Length; i++)
 				{
-					if (_neuronNetwork[i].GetAxonPower() == p)
+					if (Math.Abs(_neuronNetwork[i].GetAxonPower() - p) < _TOLERANCE)
 					{
 						answer = i + 1;
 					}
 				}
 
-				Rectangle[] rec = {Ans1, Ans2, Ans3};
+				Rectangle[] rec = { Ans1, Ans2, Ans3 };
 				bool result = Fill(number, answer, rec);
-
-				if (result)
-					_numberOfShot.Add(true);
-				else
-				{
-					_numberOfShot.Add(false);
-				}
+				_numberOfShot.Add(result);
 
 				_speed = LearnSpeed.Value;
 
-				LoadBitmapFromImageControl(bitmapInput, InputImage);
+				BitmapToImageControl(bitmapInput, InputImage);
 
 				if (_counter++ > 20)
 				{
@@ -104,8 +97,8 @@ namespace NeuroNetworkLiter
 				}
 
 				int lol = (from e in _numberOfShot
-					where e
-					select e).Count();
+						   where e
+						   select e).Count();
 				double newResult = (Convert.ToDouble(lol)/_numberOfShot.Count);
 				if (newResult > 0.99)
 				{
@@ -122,52 +115,50 @@ namespace NeuroNetworkLiter
 			_thread.Start();
 		}
 
-		private void LoadBitmapFromImageControl(Bitmap bitmapInput, Image image)
+		private void BitmapToImageControl(Bitmap bitmapInput, Image image)
 		{
 			var b = new Bitmap(160, 200);
 			using (Graphics g = Graphics.FromImage(b))
 			{
-				g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+				g.InterpolationMode = InterpolationMode.NearestNeighbor;
 				g.DrawImage(bitmapInput, 0, 0, b.Width, b.Height);
 				ImageSource imgSourceFromBitmap = Imaging.CreateBitmapSourceFromHBitmap(b.GetHbitmap(), IntPtr.Zero,
 					Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
 				image.Source = imgSourceFromBitmap;
 			}
 
-
 			var listByte = new byte[10*8*3];
 			for (int x = 0; x < 10; x++)
 			{
 				for (int y = 0; y < 8; y++)
 				{
-					listByte[(((8*x)+y) * 3) + 0] = bitmapInput.GetPixel(y, x).B;
-					listByte[(((8*x)+y) * 3) + 1] = bitmapInput.GetPixel(y, x).G;
-					listByte[(((8*x)+y) * 3) + 2] = bitmapInput.GetPixel(y, x).R;
+					listByte[(((8*x) + y)*3) + 0] = bitmapInput.GetPixel(y, x).B;
+					listByte[(((8*x) + y)*3) + 1] = bitmapInput.GetPixel(y, x).G;
+					listByte[(((8*x) + y)*3) + 2] = bitmapInput.GetPixel(y, x).R;
 				}
 			}
 
 			var input = new byte[listByte.Length*20*20];
-			List<int> ins = new List<int>();
 			int i = 0;
-			for (int m = 0; m < listByte.Length; m+=3)
+			for (int m = 0; m < listByte.Length; m += 3)
 			{
 				for (int k = 0; k < 20; k++)
 				{
 					for (int s = 0; s < 20; s++)
 					{
-						input[((k*8*20 + s + (i/8)*8*20*20 + (i%8)*20) * 3) + 0] = listByte[m + 0];
-						input[((k*8*20 + s + (i/8)*8*20*20 + (i%8)*20) * 3) + 1] = listByte[m + 1];
-						input[((k*8*20 + s + (i/8)*8*20*20 + (i%8)*20) * 3) + 2] = listByte[m + 2];
+						input[((k*8*20 + s + (i/8)*8*20*20 + (i%8)*20)*3) + 0] = listByte[m + 0];
+						input[((k*8*20 + s + (i/8)*8*20*20 + (i%8)*20)*3) + 1] = listByte[m + 1];
+						input[((k*8*20 + s + (i/8)*8*20*20 + (i%8)*20)*3) + 2] = listByte[m + 2];
 					}
 				}
 				i++;
 			}
 			using (new MemoryStream(input))
 			{
-				const int w = 8*20;
-				const int h = 10*20;
+				const int W = 8*20;
+				const int H = 10*20;
 
-				var bitmap = new Bitmap(w, h, PixelFormat.Format24bppRgb);
+				var bitmap = new Bitmap(W, H, PixelFormat.Format24bppRgb);
 				BitmapData bmData = bitmap.LockBits(new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height),
 					ImageLockMode.ReadWrite,
 					bitmap.PixelFormat);
@@ -175,12 +166,10 @@ namespace NeuroNetworkLiter
 				Marshal.Copy(input, 0, pNative, input.Length);
 				bitmap.UnlockBits(bmData);
 
-
 				image.Source = Imaging.CreateBitmapSourceFromHBitmap(bitmap.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty,
 					BitmapSizeOptions.FromEmptyOptions());
 			}
 		}
-
 
 		private bool Fill(int number, int answer, Rectangle[] rec)
 		{
@@ -216,9 +205,9 @@ namespace NeuroNetworkLiter
 					}
 				}
 			}
-			LoadBitmapFromImageControl(WeightToBitmap((_neuronNetwork[0].Weight)), Memory1);
-			LoadBitmapFromImageControl(WeightToBitmap((_neuronNetwork[1].Weight)), Memory2);
-			LoadBitmapFromImageControl(WeightToBitmap((_neuronNetwork[2].Weight)), Memory3);
+			BitmapToImageControl(WeightToBitmap((_neuronNetwork[0].Weight)), Memory1);
+			BitmapToImageControl(WeightToBitmap((_neuronNetwork[1].Weight)), Memory2);
+			BitmapToImageControl(WeightToBitmap((_neuronNetwork[2].Weight)), Memory3);
 			return result;
 		}
 
@@ -231,38 +220,38 @@ namespace NeuroNetworkLiter
 			//Теперь нарисуем график
 			var aDrawingGroup = new DrawingGroup();
 
-
 			for (int drawingStage = 0; drawingStage < 10; drawingStage++)
 			{
 				var drw = new GeometryDrawing();
 				var gg = new GeometryGroup();
 
-
 				//Задный фон
 				if (drawingStage == 1)
 				{
-					drw.Brush = Brushes.Beige;
-					drw.Pen = new Pen(Brushes.LightGray, 0.01);
-					var myRectGeometry = new RectangleGeometry {Rect = new Rect(0, 0, 1, 1)};
+					drw.Brush = Brushes.White;
+					var myRectGeometry = new RectangleGeometry
+					{
+						Rect = new Rect(0, 0, 1, 1)
+					};
 					gg.Children.Add(myRectGeometry);
 				}
 
 				//Мелкая сетка
 				if (drawingStage == 2)
 				{
-					drw.Brush = Brushes.Beige;
-					drw.Pen = new Pen(Brushes.Gray, 0.003);
-					//drw.Pen.DashStyle = DashStyles.Dot;
+					drw.Brush = Brushes.Blue;
+					drw.Pen = new Pen(Brushes.Blue, 0.003);
 
 					var dashes = new DoubleCollection();
 					for (int i = 1; i < 10; i++)
+					{
 						dashes.Add(0.1);
+					}
 					drw.Pen.DashStyle = new DashStyle(dashes, 0);
 
 					drw.Pen.EndLineCap = PenLineCap.Round;
 					drw.Pen.StartLineCap = PenLineCap.Round;
 					drw.Pen.DashCap = PenLineCap.Round;
-
 
 					for (int i = 1; i < 10; i++)
 					{
@@ -271,11 +260,10 @@ namespace NeuroNetworkLiter
 					}
 				}
 
-
 				//график #1 - линия
 				if (drawingStage == 3)
 				{
-					drw.Brush = Brushes.White;
+					drw.Brush = Brushes.Black;
 					drw.Pen = new Pen(Brushes.Black, 0.005);
 
 					gg = new GeometryGroup();
@@ -291,29 +279,33 @@ namespace NeuroNetworkLiter
 				if (drawingStage == 5)
 				{
 					drw.Brush = Brushes.Transparent;
-					drw.Pen = new Pen(Brushes.White, 0.2);
+					drw.Pen = new Pen(Brushes.White, 0.1);
 
-					var myRectGeometry = new RectangleGeometry {Rect = new Rect(-0.1, -0.1, 1.2, 1.2)};
+					var myRectGeometry = new RectangleGeometry
+					{
+						Rect = new Rect(-0.05, -0.05, 1.1, 1.1)
+					};
 					gg.Children.Add(myRectGeometry);
 				}
-
 
 				//Рамка
 				if (drawingStage == 6)
 				{
 					drw.Brush = Brushes.Transparent;
-					drw.Pen = new Pen(Brushes.LightGray, 0.01);
+					drw.Pen = new Pen(Brushes.Black, 0.003);
 
-					var myRectGeometry = new RectangleGeometry {Rect = new Rect(0, 0, 1, 1)};
+					var myRectGeometry = new RectangleGeometry
+					{
+						Rect = new Rect(0, 0, 1, 1)
+					};
 					gg.Children.Add(myRectGeometry);
 				}
-
 
 				//Надписи
 				if (drawingStage == 7)
 				{
-					drw.Brush = Brushes.LightGray;
-					drw.Pen = new Pen(Brushes.Gray, 0.003);
+					drw.Brush = Brushes.Black;
+					drw.Pen = new Pen(Brushes.Black, 0.003);
 
 					for (int i = 1; i < 10; i++)
 					{
@@ -322,16 +314,18 @@ namespace NeuroNetworkLiter
 							(100 - i*10).ToString(CultureInfo.InvariantCulture),
 							CultureInfo.GetCultureInfo("en-us"),
 							FlowDirection.LeftToRight,
-							new Typeface("Verdana"),
+							new Typeface("Helvetica"),
 							0.05,
 							Brushes.Black);
 
 						// Set the font weight to Bold for the formatted text.
-						formattedText.SetFontWeight(FontWeights.Light);
+						formattedText.SetFontWeight(FontWeights.UltraLight);
 
 						// Build a geometry out of the formatted text.
-						Geometry geometry = formattedText.BuildGeometry(new Point(-0.1, i*0.1 - 0.03));
+						Geometry geometry = formattedText.BuildGeometry(new Point(-0.07, i*0.1 - 0.03));
+						Geometry geometry2 = formattedText.BuildGeometry(new Point(1.02, i*0.1 - 0.03));
 						gg.Children.Add(geometry);
+						gg.Children.Add(geometry2);
 					}
 				}
 
@@ -350,9 +344,10 @@ namespace NeuroNetworkLiter
 				Dispatcher.BeginInvoke(DispatcherPriority.Input, _refresh);
 				Thread.Sleep(400);
 			}
+			// ReSharper disable once FunctionNeverReturns
 		}
 
-		private Bitmap WeightToBitmap(int[,] weight)
+		private Bitmap WeightToBitmap(double[,] weight)
 		{
 			int i = 0;
 			var input = new byte[weight.Length*3];
@@ -360,8 +355,8 @@ namespace NeuroNetworkLiter
 			{
 				for (int s = 0; s < 8; s++)
 				{
-					int b = weight[s, m];
-					int val = 50 + b*10;
+					double b = weight[s, m];
+					double val = 50 + b/10;
 					byte value = 0;
 					if (val > 0)
 					{
@@ -376,19 +371,17 @@ namespace NeuroNetworkLiter
 					input[i++] = value;
 				}
 			}
-			using (var ms = new MemoryStream(input))
+			using (new MemoryStream(input))
 			{
-				int w = 8;
-				int h = 10;
+				const int W = 8;
+				const int H = 10;
 
-				var bitmap = new Bitmap(w, h, PixelFormat.Format24bppRgb);
+				var bitmap = new Bitmap(W, H, PixelFormat.Format24bppRgb);
 				BitmapData bmData = bitmap.LockBits(new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height),
-					ImageLockMode.ReadWrite,
-					bitmap.PixelFormat);
+					ImageLockMode.ReadWrite, bitmap.PixelFormat);
 				IntPtr pNative = bmData.Scan0;
 				Marshal.Copy(input, 0, pNative, input.Length);
 				bitmap.UnlockBits(bmData);
-
 
 				return bitmap;
 			}

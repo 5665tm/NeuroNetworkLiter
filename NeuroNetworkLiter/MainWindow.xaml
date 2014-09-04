@@ -1,7 +1,7 @@
 ﻿<Window x:Class="NeuroNetworkLiter.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MainWindow" Height="751.394" Width="716" Background="#FF323232" Closing="Window_Closing"
+        Title="MainWindow" Height="764.394" Width="716" Background="#FF323232" Closing="Window_Closing" ResizeMode="NoResize"
 		>
 	<Grid>
 		<Image x:Name="InputImage" HorizontalAlignment="Left" Height="200" Margin="10,10,0,0" VerticalAlignment="Top" Width="160" Stretch="Fill" />
@@ -13,7 +13,7 @@
 		<Rectangle x:Name="Ans1" Fill="White" HorizontalAlignment="Left" Height="29" Margin="175,229,0,0" Stroke="Black" VerticalAlignment="Top" Width="160"/>
 		<Rectangle x:Name="Ans2" Fill="#FFF4F4F5" HorizontalAlignment="Left" Height="29" Margin="340,229,0,0" Stroke="Black" VerticalAlignment="Top" Width="160"/>
 		<Rectangle x:Name="Ans3" Fill="#FFF4F4F5" HorizontalAlignment="Left" Height="29" Margin="505,229,0,0" Stroke="Black" VerticalAlignment="Top" Width="160"/>
-		<Image x:Name="Image1" HorizontalAlignment="Left" Height="398" Margin="10,263,0,0" VerticalAlignment="Top" Width="688" Stretch="Fill"/>
+		<Image x:Name="Image1" Margin="0,263,0,75.394" Stretch="Fill"/>
 		<Label Content="Процент угадываний" HorizontalAlignment="Right" Margin="0,263,0,0" VerticalAlignment="Top" Width="708" Foreground="White" HorizontalContentAlignment="Center" Background="Black"/>
 	</Grid>
 </Window>

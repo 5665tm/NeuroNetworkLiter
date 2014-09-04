@@ -1,4 +1,4 @@
-// Changed 2014 09 03 12:31 AM Karavaev Vadim
+// Changed: 2014 09 04 9:58 : 5665tm
 
 namespace NeuroNetworkLiter
 {
@@ -7,44 +7,44 @@ namespace NeuroNetworkLiter
 		/// <summary>
 		///     Входная информация
 		/// </summary>
-		public readonly int[,] Input;
+		public readonly double[,] Input;
 
 		/// <summary>
 		///     Массив для хранения весов синапсов
 		/// </summary>
-		private readonly int[,] _weight;
+		private readonly double[,] _weight;
 
 		/// <summary>
 		///     Возвращает таблицу весов
 		/// </summary>
-		public int[,] Weight { get { return _weight; } }
+		public double[,] Weight { get { return _weight; } }
 
 		/// <summary>
 		///     Массив для хранения отмасштабированных сигналов
 		/// </summary>
-		private readonly int[,] _sinapsScale;
+		private readonly double[,] _sinapsScale;
 
 		/// <summary>
 		///     Сумма для хранения отмасштабированных сигналов
 		/// </summary>
-		private int _axonPower;
+		private double _axonPower;
 
 		/// <summary>
-		/// Конструктор нового нейрона
+		///     Конструктор нового нейрона
 		/// </summary>
 		/// <param name="x">Количество дендритов по ширине</param>
 		/// <param name="y">Количество дендритов по высоте</param>
 		public Neuron(int x, int y)
 		{
-			_weight = new int[x, y];
-			_sinapsScale = new int[x, y];
-			Input = new int[x,y];
+			_weight = new double[x, y];
+			_sinapsScale = new double[x, y];
+			Input = new double[x, y];
 		}
 
 		/// <summary>
 		///     Масштабирование
 		/// </summary>
-		public int GetAxonPower()
+		public double GetAxonPower()
 		{
 			// Масштабирование
 			for (int x = 0; x < 8; x++)
@@ -71,7 +71,7 @@ namespace NeuroNetworkLiter
 		///     Указывает нейрону на то что это было его изображение
 		/// </summary>
 		/// <param name="inP">Входные данные</param>
-		public void Award(int[,] inP)
+		public void Award(double[,] inP)
 		{
 			for (int x = 0; x < 8; x++)
 			{
@@ -86,7 +86,7 @@ namespace NeuroNetworkLiter
 		///     Указывает нейрону на то что это изображение было не для него
 		/// </summary>
 		/// <param name="inP">Входные данные</param>
-		public void Punish(int[,] inP)
+		public void Punish(double[,] inP)
 		{
 			for (int x = 0; x < 8; x++)
 			{
